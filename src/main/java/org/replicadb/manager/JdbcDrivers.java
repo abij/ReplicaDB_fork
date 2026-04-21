@@ -7,7 +7,7 @@ public enum JdbcDrivers {
     JTDS_SQLSERVER("net.sourceforge.jtds.jdbc.Driver", "jdbc:jtds:sqlserver:"),
     DB2("com.ibm.db2.jcc.DB2Driver", "jdbc:db2:"), DB2_AS400("com.ibm.as400.access.AS400JDBCDriver", "jdbc:as400:"), NETEZZA("org.netezza.Driver", "jdbc:netezza:"),
     CUBRID("cubrid.jdbc.driver.CUBRIDDriver", "jdbc:cubrid:"), DENODO("com.denodo.vdp.jdbc.Driver", "jdbc:vdb:"),
-    KAFKA(null, "kafka:"), S3(null, "s3:"),
+    KAFKA(null, "kafka:"), S3(null, "s3:"), ADLS2(null, "abfss:"),
     FILE(null, "file:"), SQLITE("org.sqlite.JDBC", "jdbc:sqlite"),
     MONGODB(null, "mongodb:"), MONGODBSRV(null, "mongodb+srv:");
 

@@ -118,6 +118,12 @@
             <version>${version.testContainers}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>azure</artifactId>
+            <version>${version.testContainers}</version>
+            <scope>test</scope>
+        </dependency>
 
 
         <!-- MySQL Connector - Updated to fix CVE-2023-22102: takeover vulnerability affecting versions <= 8.0.33 -->
@@ -321,6 +327,30 @@
 
 
         <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-hadoop</artifactId>
+            <version>1.14.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-file-datalake</artifactId>
+            <version>12.22.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+            <version>1.15.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-core</artifactId>
             <version>1.6.7</version>
@@ -336,6 +366,13 @@
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-tools</artifactId>
             <version>1.6.7</version>
+            <exclusions>
+                <!-- hadoop-hdfs pulls in netty-all:4.0.23.Final which conflicts with Azure SDK's Netty 4.1.x -->
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-all</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

@@ -53,6 +53,8 @@ public class ManagerFactory {
                 return new SQLServerManager(options, dsType);
             } else if (S3.isTheManagerTypeOf(options, dsType)) {
                 return new S3Manager(options, dsType);
+            } else if (ADLS2.isTheManagerTypeOf(options, dsType)) {
+                return new ADLSGen2Manager(options, dsType);
             } else if (MYSQL.isTheManagerTypeOf(options, dsType) || MARIADB.isTheManagerTypeOf(options, dsType)) {
                 return new MySQLManager(options, dsType);
             } else if (FILE.isTheManagerTypeOf(options, dsType)) {
