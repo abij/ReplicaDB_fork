@@ -81,6 +81,7 @@ public class ADLSGen2Manager extends SqlManager {
     private String fileSystemName;
     private String serviceEndpoint;
     private String filePath;
+    private String statsFilePathOverride; // null = derive from filePath
 
     // Authentication — at most one will be non-null
     private String accountKey;       // option 1: storage account key
@@ -136,6 +137,11 @@ public class ADLSGen2Manager extends SqlManager {
                     ? keyFileNameProp
                     : derivedPath;
 
+            // Optional: override where the stats JSON is written.
+            // Value is a path within the same filesystem, e.g. meta/result.json
+            String statsFile = props.getProperty("statsFile");
+            this.statsFilePathOverride = (statsFile != null && !statsFile.isEmpty()) ? statsFile : null;
+
         } catch (Exception e) {
             throw new IllegalArgumentException(
                     "Invalid ADLS Gen2 connection string. Expected: abfss://filesystem@account.dfs.core.windows.net/path", e);
@@ -150,14 +156,40 @@ public class ADLSGen2Manager extends SqlManager {
     // -------------------------------------------------------------------------
 
     /**
-     * Clears the shared stats map so a fresh run starts clean.
-     * Skips SqlManager's SQL-oriented pre-task logic (staging tables, truncate)
-     * which does not apply to a storage sink.
+     * Validates the sink path and checks that no target files already exist,
+     * then clears the shared stats map so a fresh run starts clean.
+     *
+     * <p>Fails fast with a clear error before any data is read or written if:
+     * <ul>
+     *   <li>The sink URI has no file path (root of container is not a valid sink).</li>
+     *   <li>Any of the target output files already exist in ADLS Gen2.</li>
+     * </ul>
      */
     @Override
-    public Future<Integer> preSinkTasks(ExecutorService executor) {
+    public Future<Integer> preSinkTasks(ExecutorService executor) throws Exception {
+        validateSinkPath();
         taskStats.clear();
         return null;
+    }
+
+    private void validateSinkPath() {
+        if (filePath == null || filePath.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "ADLS Gen2 sink path is missing. Specify a file path in the URI, " +
+                    "e.g. abfss://filesystem@account.dfs.core.windows.net/path/to/output.parquet");
+        }
+
+        DataLakeFileSystemClient fsClient = buildServiceClient().getFileSystemClient(fileSystemName);
+        int jobs = options.getJobs();
+
+        for (int taskId = 0; taskId < jobs; taskId++) {
+            String targetPath = resolveTaskPath(filePath, taskId);
+            if (fsClient.getFileClient(targetPath).exists()) {
+                throw new IllegalStateException(
+                        "ADLS Gen2 sink file already exists: " + targetPath +
+                        ". Delete it first or choose a different destination path.");
+            }
+        }
     }
 
     /**
@@ -196,7 +228,7 @@ public class ADLSGen2Manager extends SqlManager {
         root.put("totalRows", totalRows);
 
         byte[] json = MAPPER.writeValueAsBytes(root);
-        String statsPath = statsFilePath(filePath);
+        String statsPath = statsFilePathOverride != null ? statsFilePathOverride : statsFilePath(filePath);
         LOG.info("Writing replication stats to ADLS Gen2: {}", statsPath);
 
         buildFileClient(statsPath).upload(BinaryData.fromBytes(json), true);

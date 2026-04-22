@@ -80,7 +80,7 @@ public class ReplicadbDB2Container extends Db2Container {
       this.addEnv("TEXT_SEARCH", "false");       // Disable text search indexing (minor improvement)
       this.addEnv("SAMPLEDB", "false");          // Don't create sample database with sample data
       // Set longer startup timeout for ARM64 emulation (default is 120 seconds, not enough)
-      this.withStartupTimeout(java.time.Duration.ofMinutes(20));
+      this.withStartupTimeout(java.time.Duration.ofMinutes(30));
    }
 
    public static ReplicadbDB2Container getInstance() {

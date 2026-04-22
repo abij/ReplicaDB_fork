@@ -194,6 +194,10 @@ public class ParquetFileManager extends FileManager {
 
     /**
      * Populate a Parquet Group from the current ResultSet row.
+     *
+     * <p>Dispatches on the <em>Parquet schema type</em> (not the JDBC type) so that all
+     * parallel partitions write consistently even when a driver (e.g. SQLite) reports
+     * different JDBC type codes for the same logical column across partitions.
      */
     private static void fillGroup(Group group, ResultSet resultSet, MessageType schema) throws SQLException, IOException {
         ResultSetMetaData rsmd = resultSet.getMetaData();
@@ -204,69 +208,80 @@ public class ParquetFileManager extends FileManager {
             Object value = resultSet.getObject(i);
             if (value == null) continue; // optional fields — just omit
 
-            switch (rsmd.getColumnType(i)) {
-                case CHAR:
-                case VARCHAR:
-                case LONGVARCHAR:
-                    group.add(name, Binary.fromString(value.toString()));
+            org.apache.parquet.schema.Type fieldType = schema.getType(name);
+            PrimitiveTypeName primitive = fieldType.asPrimitiveType().getPrimitiveTypeName();
+            LogicalTypeAnnotation logical = fieldType.getLogicalTypeAnnotation();
+
+            switch (primitive) {
+                case INT32:
+                    if (logical instanceof LogicalTypeAnnotation.DateLogicalTypeAnnotation) {
+                        // DATE — days since Unix epoch
+                        try {
+                            Date dateVal = resultSet.getDate(i);
+                            if (dateVal != null) group.add(name, (int) dateVal.toLocalDate().toEpochDay());
+                        } catch (SQLException ignored) {
+                            // Some drivers (e.g. SQLite) return dates as ISO strings
+                            group.add(name, (int) java.time.LocalDate.parse(value.toString()).toEpochDay());
+                        }
+                    } else {
+                        group.add(name, ((Number) value).intValue());
+                    }
                     break;
-                case CLOB:
-                    Clob clob = resultSet.getClob(i);
-                    group.add(name, Binary.fromString(clob.getSubString(1, (int) clob.length())));
-                    clob.free();
-                    break;
-                case SQLXML:
-                    SQLXML sqlxml = resultSet.getSQLXML(i);
-                    group.add(name, Binary.fromString(sqlxml.getString()));
-                    sqlxml.free();
-                    break;
-                case TINYINT:
-                case SMALLINT:
-                case INTEGER:
-                    group.add(name, ((Number) value).intValue());
-                    break;
-                case BIGINT:
-                    group.add(name, ((Number) value).longValue());
-                    break;
-                case REAL:
-                    group.add(name, ((Number) value).floatValue());
+                case INT64:
+                    if (logical instanceof LogicalTypeAnnotation.TimestampLogicalTypeAnnotation) {
+                        Timestamp ts = resultSet.getTimestamp(i);
+                        if (ts != null) group.add(name, ts.getTime());
+                    } else {
+                        group.add(name, ((Number) value).longValue());
+                    }
                     break;
                 case FLOAT:
+                    group.add(name, ((Number) value).floatValue());
+                    break;
                 case DOUBLE:
                     group.add(name, ((Number) value).doubleValue());
                     break;
                 case BOOLEAN:
-                case BIT:
                     group.add(name, resultSet.getBoolean(i));
                     break;
-                case NUMERIC:
-                case DECIMAL:
-                    BigDecimal bd = (BigDecimal) value;
-                    group.add(name, Binary.fromConstantByteArray(bd.unscaledValue().toByteArray()));
-                    break;
-                case DATE:
-                    group.add(name, (int) ((Date) value).toLocalDate().toEpochDay());
-                    break;
-                case TIMESTAMP:
-                case TIMESTAMP_WITH_TIMEZONE:
-                case -101:
-                case -102:
-                    group.add(name, resultSet.getTimestamp(i).getTime());
-                    break;
                 case BINARY:
-                case VARBINARY:
-                case LONGVARBINARY:
-                    group.add(name, Binary.fromConstantByteArray(resultSet.getBytes(i)));
-                    break;
-                case BLOB:
-                    Blob blob = resultSet.getBlob(i);
-                    group.add(name, Binary.fromConstantByteArray(IOUtils.toByteArray(blob.getBinaryStream())));
-                    blob.free();
-                    break;
-                case ARRAY:
-                    Array arr = resultSet.getArray(i);
-                    group.add(name, Binary.fromString(java.util.Arrays.deepToString((Object[]) arr.getArray())));
-                    arr.free();
+                    if (logical instanceof LogicalTypeAnnotation.DecimalLogicalTypeAnnotation) {
+                        // NUMERIC / DECIMAL — unscaled bytes, aligned to schema scale
+                        BigDecimal bd = resultSet.getBigDecimal(i);
+                        if (bd != null) {
+                            int schemaScale = ((LogicalTypeAnnotation.DecimalLogicalTypeAnnotation) logical).getScale();
+                            bd = bd.setScale(schemaScale, java.math.RoundingMode.HALF_UP);
+                            group.add(name, Binary.fromConstantByteArray(bd.unscaledValue().toByteArray()));
+                        }
+                    } else if (logical instanceof LogicalTypeAnnotation.StringLogicalTypeAnnotation) {
+                        // STRING — covers CHAR/VARCHAR/CLOB/SQLXML/ARRAY and the default fallback
+                        int jdbcType = rsmd.getColumnType(i);
+                        if (jdbcType == CLOB) {
+                            Clob clob = resultSet.getClob(i);
+                            group.add(name, Binary.fromString(clob.getSubString(1, (int) clob.length())));
+                            clob.free();
+                        } else if (jdbcType == SQLXML) {
+                            SQLXML sqlxml = resultSet.getSQLXML(i);
+                            group.add(name, Binary.fromString(sqlxml.getString()));
+                            sqlxml.free();
+                        } else if (jdbcType == ARRAY) {
+                            Array arr = resultSet.getArray(i);
+                            group.add(name, Binary.fromString(java.util.Arrays.deepToString((Object[]) arr.getArray())));
+                            arr.free();
+                        } else {
+                            group.add(name, Binary.fromString(value.toString()));
+                        }
+                    } else {
+                        // Raw binary — BINARY/VARBINARY/BLOB
+                        if (rsmd.getColumnType(i) == BLOB) {
+                            Blob blob = resultSet.getBlob(i);
+                            group.add(name, Binary.fromConstantByteArray(IOUtils.toByteArray(blob.getBinaryStream())));
+                            blob.free();
+                        } else {
+                            byte[] bytes = resultSet.getBytes(i);
+                            if (bytes != null) group.add(name, Binary.fromConstantByteArray(bytes));
+                        }
+                    }
                     break;
                 default:
                     group.add(name, Binary.fromString(value.toString()));

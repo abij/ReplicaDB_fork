@@ -1,6 +1,7 @@
 package org.replicadb.db2;
 
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
+import com.azure.storage.file.datalake.models.DataLakeStorageException;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,9 +71,14 @@ class DB22ADLSGen2FileTest {
 
     @AfterEach
     void tearDown() throws SQLException {
-        // Delete all files written during this test
-        for (PathItem item : fsClient.listPaths()) {
-            fsClient.deleteFileIfExists(item.getName());
+        // Delete all files written during this test.
+        // Azurite returns 400 on listPaths() when the filesystem is empty — guard against it.
+        try {
+            for (PathItem item : fsClient.listPaths()) {
+                fsClient.deleteFileIfExists(item.getName());
+            }
+        } catch (DataLakeStorageException e) {
+            LOG.debug("listPaths returned error (likely empty filesystem): {}", e.getMessage());
         }
         this.db2Conn.close();
         FileManager.setTempFilesPath(new HashMap<>());
