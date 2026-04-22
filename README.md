@@ -6,6 +6,30 @@
 
 ![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
+---
+
+> **This is a fork of [osalvador/ReplicaDB](https://github.com/osalvador/ReplicaDB) adding Azure Data Lake Storage Gen2 (ADLS Gen2) as a sink, with Parquet and CSV output.**
+>
+> **Download the pre-built JAR (includes DB2 JCC driver):**
+> ```
+> https://github.com/abij/ReplicaDB_fork/releases/tag/adls2-preview
+> ```
+>
+> **Quick start — replicate any JDBC source to ADLS Gen2 Parquet:**
+> ```bash
+> java -jar ReplicaDB-0.18.0-jar-with-dependencies.jar \
+>   --source-connect "jdbc:db2://host:50000/dbname" \
+>   --source-user <user> --source-password <pass> \
+>   --source-table MY_TABLE \
+>   --sink-connect "abfss://filesystem@account.dfs.core.windows.net/data/output.parquet" \
+>   --sink-file-format parquet \
+>   --jobs 4
+> ```
+>
+> Authentication uses the [Default Azure credential chain](https://learn.microsoft.com/en-us/azure/developer/java/sdk/identity-azure-hosted-auth) (Azure CLI, managed identity, service principal). See [ADLS Gen2 sink configuration](#adls-gen2-sink) below for all options.
+
+---
+
 ReplicaDB is a high-performance, open-source command-line tool for bulk data replication between heterogeneous databases. It enables efficient ETL/ELT workflows by transferring data in parallel between Oracle, PostgreSQL, MySQL, MongoDB, SQL Server, and other databases without requiring database agents or triggers.
 
 ReplicaDB supports a wide range of data sources including relational databases (Oracle, PostgreSQL, MySQL, MariaDB, SQL Server, SQLite, IBM DB2 LUW and DB2 for i), NoSQL databases (MongoDB), data virtualization platforms (Denodo), file formats (CSV), cloud storage (Amazon S3), and streaming platforms (Kafka). Any JDBC-compliant database is also supported with some limitations.
@@ -223,9 +247,72 @@ $ replicadb --mode=complete -j=1 \
 | CSV                     |    :heavy_check_mark:    | :heavy_check_mark: |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Kafka                   | :heavy_multiplication_x: |         N/A        |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Amazon S3               | :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
+| Azure ADLS Gen2 *(fork)*| :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
 See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html) for driver installation and platform-specific details.
+
+# ADLS Gen2 Sink
+
+> This feature is available in this fork only.
+
+Sink URI format:
+```
+abfss://<filesystem>@<account>.dfs.core.windows.net/<path/to/output.parquet>
+```
+
+File formats: `parquet` (default: Snappy compressed) and `csv`.
+
+## Authentication
+
+Resolved in priority order via `sink.connect.parameter.*`:
+
+| Priority | Method | Parameters |
+|----------|--------|------------|
+| 1 | Storage account key | `accountKey=<key>` |
+| 2 | Service principal | `tenantId=`, `clientId=`, `clientSecret=` |
+| 3 | Default Azure credential | *(none — uses Azure CLI / managed identity / env vars)* |
+
+## Connection Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `accountKey` | Storage account key | — |
+| `tenantId` / `clientId` / `clientSecret` | Service principal | — |
+| `endpoint` | Override service endpoint (Azurite / sovereign cloud) | derived from URI |
+| `parquet.compression` | `SNAPPY`, `GZIP`, `ZSTD`, `UNCOMPRESSED` | `SNAPPY` |
+| `statsFile` | Path within the filesystem to write the stats JSON | `<dir>/_replicadb_stats.json` |
+
+## Example options file
+
+```properties
+# replicadb.conf
+source.connect=jdbc:db2://dbhost:50000/mydb
+source.user=myuser
+source.password=secret
+source.table=MY_TABLE
+
+sink.connect=abfss://landing@mystorageaccount.dfs.core.windows.net/data/output.parquet
+sink.file.format=parquet
+
+# Auth — omit to use Azure CLI / managed identity
+sink.connect.parameter.tenantId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+sink.connect.parameter.clientId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+sink.connect.parameter.clientSecret=<secret>
+
+# Optional
+sink.connect.parameter.parquet.compression=SNAPPY
+sink.connect.parameter.statsFile=meta/run_stats.json
+```
+
+Output files with `--jobs 4`:
+```
+data/output_0.snappy.parquet
+data/output_1.snappy.parquet
+data/output_2.snappy.parquet
+data/output_3.snappy.parquet
+meta/run_stats.json
+```
 
 # Roadmap
 
