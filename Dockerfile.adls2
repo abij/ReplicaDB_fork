@@ -1,0 +1,17 @@
+FROM eclipse-temurin:11-jre
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+ARG JAR_URL=https://github.com/abij/ReplicaDB_fork/releases/download/adls2-preview/ReplicaDB-0.18.0-jar-with-dependencies.jar
+ENV USERNAME="replicadb"
+
+RUN groupadd -r ${USERNAME} && useradd -r -g ${USERNAME} ${USERNAME}
+
+WORKDIR /home/${USERNAME}
+
+RUN curl -fsSL "${JAR_URL}" -o replicadb.jar
+
+RUN chown ${USERNAME}:${USERNAME} replicadb.jar
+USER "${USERNAME}:${USERNAME}"
+
+ENTRYPOINT ["java", "-jar", "/home/replicadb/replicadb.jar"]
