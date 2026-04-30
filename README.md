@@ -314,6 +314,37 @@ data/output_3.snappy.parquet
 meta/run_stats.json
 ```
 
+## Docker
+
+A ready-to-use image can be built from `Dockerfile.adls2` in this repository. It downloads the fat JAR (including DB2 JCC driver) from the GitHub release at build time — no local Java installation required.
+
+```bash
+# Build the image
+docker build -f Dockerfile.adls2 -t replicadb-adls2:preview .
+
+# Run with an options file
+docker run --rm \
+  -v /path/to/replicadb.conf:/conf/replicadb.conf \
+  replicadb-adls2:preview \
+  --options-file /conf/replicadb.conf
+```
+
+### Azure CLI authentication
+
+If you authenticate via `az login` on the host, mount the Azure credential cache read-only into the container. The `DefaultAzureCredential` chain will find it automatically — no credentials needed in the options file:
+
+```bash
+docker run --rm \
+  -v ~/.azure:/home/replicadb/.azure:ro \
+  -v /path/to/replicadb.conf:/conf/replicadb.conf \
+  replicadb-adls2:preview \
+  --options-file /conf/replicadb.conf
+```
+
+This works for local development and CI pipelines where `az login` (or `az login --service-principal`) has already been run on the host.
+
+For AKS or other Azure-hosted environments, workload identity or managed identity is picked up automatically without any mount.
+
 # Roadmap
 
 Features: 
