@@ -233,9 +233,16 @@ public class ADLSGen2Manager extends SqlManager {
 
         byte[] json = MAPPER.writeValueAsBytes(root);
         String statsPath = statsFilePathOverride != null ? statsFilePathOverride : statsFilePath(filePath);
-        LOG.info("Writing replication stats to ADLS Gen2: {}", statsPath);
 
-        buildFileClient(statsPath).upload(BinaryData.fromBytes(json), true);
+        if (statsPath.startsWith("abfss://") || !isLocalPath(statsPath)) {
+            LOG.info("Writing replication stats to ADLS Gen2: {}", statsPath);
+            buildFileClient(statsPath).upload(BinaryData.fromBytes(json), true);
+        } else {
+            LOG.info("Writing replication stats to local file: {}", statsPath);
+            java.nio.file.Path localPath = java.nio.file.Paths.get(statsPath);
+            if (localPath.getParent() != null) java.nio.file.Files.createDirectories(localPath.getParent());
+            java.nio.file.Files.write(localPath, json);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -414,6 +421,13 @@ public class ADLSGen2Manager extends SqlManager {
             case "UNCOMPRESSED": return "";
             default:             return codec.toLowerCase();
         }
+    }
+
+    /** Returns true when the path has no URI scheme — i.e. it is a local filesystem path. */
+    private static boolean isLocalPath(String path) {
+        // A URI scheme is letters followed by ':', e.g. "abfss:", "s3:", "file:".
+        // Plain local paths (/tmp/x, C:\x, ./x, meta/x) contain no such prefix.
+        return !path.matches("^[a-zA-Z][a-zA-Z0-9+\\-.]*:.*");
     }
 
     private static String statsFilePath(String dataFilePath) {
