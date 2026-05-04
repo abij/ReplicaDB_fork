@@ -68,6 +68,7 @@ public class ParquetFileManager extends FileManager {
         Properties props = dsType == DataSourceType.SOURCE
                 ? options.getSourceConnectionParams()
                 : options.getSinkConnectionParams();
+        if (props == null) props = new Properties();
         CompressionCodecName codec = resolveCompression(props.getProperty("parquet.compression"));
 
         MessageType schema = messageTypeFromResultSet(resultSet);
@@ -322,14 +323,10 @@ public class ParquetFileManager extends FileManager {
     @Override
     public void cleanUp() {
         for (Map.Entry<Integer, String> entry : getTempFilesPath().entrySet()) {
-            try {
-                File f = getFileFromPathString(entry.getValue());
-                if (f != null && f.exists()) {
-                    f.delete();
-                    LOG.debug("Removed temp Parquet file {}", f.getPath());
-                }
-            } catch (MalformedURLException | URISyntaxException e) {
-                LOG.error("Error cleaning up temp file: {}", entry.getValue(), e);
+            File f = new File(entry.getValue());
+            if (f.exists()) {
+                f.delete();
+                LOG.debug("Removed temp Parquet file {}", f.getPath());
             }
         }
     }
