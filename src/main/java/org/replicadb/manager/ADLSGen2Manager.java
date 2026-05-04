@@ -366,6 +366,13 @@ public class ADLSGen2Manager extends SqlManager {
         String dir      = slash >= 0 ? path.substring(0, slash + 1) : "";
         String filename = slash >= 0 ? path.substring(slash + 1)    : path;
 
+        // If no filename was given (path is a directory), generate a default one
+        // from the sink file format, e.g. "output.parquet" or "output.csv".
+        if (filename.isEmpty()) {
+            String fmt = options.getSinkFileFormat();
+            filename = "output." + (fmt != null && !fmt.isEmpty() ? fmt.toLowerCase() : "parquet");
+        }
+
         int dot = filename.lastIndexOf('.');
         String base = dot >= 0 ? filename.substring(0, dot) : filename;
         String ext  = dot >= 0 ? filename.substring(dot)    : "";  // e.g. ".parquet"
