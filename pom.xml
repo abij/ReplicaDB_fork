@@ -300,7 +300,6 @@
             <groupId>com.ibm.db2</groupId>
             <artifactId>jcc</artifactId>
             <version>12.1.4.0</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- IBM JTOpen - Open source driver for DB2/i (AS/400) -->
