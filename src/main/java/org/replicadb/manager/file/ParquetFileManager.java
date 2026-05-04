@@ -74,13 +74,11 @@ public class ParquetFileManager extends FileManager {
         MessageType schema = messageTypeFromResultSet(resultSet);
         LOG.info("Sink Parquet schema: {}", schema);
 
-        // Normalise to file:/// (three slashes) before passing to Hadoop Path.
-        // On Windows, File.toURI() can produce file:/C:/... (single slash); when
-        // Hadoop re-parses that as a java.net.URI the ':' in "C:" appears at
-        // index 4 and triggers "Illegal char <:>" from the URI parser.
-        String fileUri = tempFile.toURI().toString()
-                .replaceFirst("^file:/([^/])", "file:///$1");
-        Path path = new Path(fileUri);
+        // Pass the absolute path string directly to Hadoop Path — avoid file:// URIs
+        // entirely. On Windows, URI-based paths (file:/C:/...) cause InvalidPathException
+        // when Hadoop's local filesystem passes them to java.nio.file.Paths.get().
+        // Hadoop normalises path separators internally, so this works on all platforms.
+        Path path = new Path(tempFile.getAbsolutePath());
         int processedRows = 0;
 
         try (ParquetWriter<Group> writer = ExampleParquetWriter.builder(path)
