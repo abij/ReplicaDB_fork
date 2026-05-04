@@ -141,7 +141,9 @@ public class ADLSGen2Manager extends SqlManager {
 
             // Optional: override where the stats JSON is written.
             // Value is a path within the same filesystem, e.g. meta/result.json
-            String statsFile = props.getProperty("statsFile");
+            // --sink-stats-file CLI arg takes priority over sink.connect.parameter.statsFile
+            String statsFile = options.getSinkStatsFile();
+            if (statsFile == null || statsFile.isEmpty()) statsFile = props.getProperty("statsFile");
             this.statsFilePathOverride = (statsFile != null && !statsFile.isEmpty()) ? statsFile : null;
 
         } catch (Exception e) {

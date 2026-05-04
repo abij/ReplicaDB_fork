@@ -35,6 +35,7 @@ public class ToolOptions {
     private String sinkStagingSchema;
     private String sinkColumns;
     private String sinkFileFormat;
+    private String sinkStatsFile;
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
     private Boolean sinkDisableTruncate = false;
@@ -264,6 +265,15 @@ public class ToolOptions {
                         .build()
         );
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-stats-file")
+                        .desc("Path within the sink filesystem where the post-replication stats JSON is written (ADLS Gen2 sink only). Relative to the container root.")
+                        .hasArg()
+                        .argName("path")
+                        .build()
+        );
+
         // Other Options
         options.addOption(
                 Option.builder()
@@ -379,6 +389,7 @@ public class ToolOptions {
             setSinkStagingTableAliasNotNull(line.getOptionValue("sink-staging-table-alias"));
             setSourceFileFormatNotNull(line.getOptionValue("source-file-format"));
             setSinkFileFormatNotNull(line.getOptionValue("sink-file-format"));
+            if (line.hasOption("sink-stats-file")) setSinkStatsFile(line.getOptionValue("sink-stats-file"));
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
@@ -492,6 +503,7 @@ public class ToolOptions {
         setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
         setSourceFileFormat(prop.getProperty("source.file.format"));
         setSinkFileFormat(prop.getProperty("sink.file.format"));
+        setSinkStatsFile(prop.getProperty("sink.stats.file"));
         setSentryDsn(prop.getProperty("sentry.dsn"));
 
         // Connection params
@@ -976,6 +988,14 @@ public class ToolOptions {
     private void setSinkFileFormatNotNull(String fileFormat) {
         if (fileFormat != null && !fileFormat.isEmpty())
             this.sinkFileFormat = fileFormat;
+    }
+
+    public String getSinkStatsFile() {
+        return sinkStatsFile;
+    }
+
+    public void setSinkStatsFile(String sinkStatsFile) {
+        this.sinkStatsFile = sinkStatsFile;
     }
 
     public String getSentryDsn() {
