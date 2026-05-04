@@ -108,6 +108,8 @@ public class ADLSGen2Manager extends SqlManager {
                 ? options.getSourceConnectionParams()
                 : options.getSinkConnectionParams();
 
+        if (props == null) props = new Properties();
+
         // Auth params — all optional; credential is resolved in priority order at runtime
         this.accountKey   = props.getProperty("accountKey");
         this.tenantId     = props.getProperty("tenantId");
