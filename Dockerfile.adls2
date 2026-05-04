@@ -14,4 +14,6 @@ RUN curl -fsSL "${JAR_URL}" -o replicadb.jar
 RUN chown ${USERNAME}:${USERNAME} replicadb.jar
 USER "${USERNAME}:${USERNAME}"
 
-ENTRYPOINT ["java", "-jar", "/home/replicadb/replicadb.jar"]
+# --sun-misc-unsafe-memory-access=allow suppresses the Unsafe deprecation warning
+# on OpenJDK 23+ (Hadoop/Netty still use sun.misc.Unsafe internally)
+ENTRYPOINT ["java", "--sun-misc-unsafe-memory-access=allow", "-jar", "/home/replicadb/replicadb.jar"]
