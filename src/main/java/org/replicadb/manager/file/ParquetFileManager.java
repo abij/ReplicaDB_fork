@@ -2,8 +2,6 @@ package org.replicadb.manager.file;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.parquet.example.data.Group;
@@ -11,6 +9,7 @@ import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.example.ExampleParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
+import org.apache.parquet.io.LocalOutputFile;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.MessageType;
@@ -61,10 +60,6 @@ public class ParquetFileManager extends FileManager {
     public int writeData(OutputStream out, ResultSet resultSet, int taskId, File tempFile) throws IOException, SQLException {
         if (tempFile == null) tempFile = createTemporalFile(taskId);
 
-        Configuration conf = new Configuration();
-        // Disable Hadoop CRC files — not needed for temp files
-        conf.set("dfs.checksum.type", "NULL");
-
         Properties props = dsType == DataSourceType.SOURCE
                 ? options.getSourceConnectionParams()
                 : options.getSinkConnectionParams();
@@ -74,15 +69,13 @@ public class ParquetFileManager extends FileManager {
         MessageType schema = messageTypeFromResultSet(resultSet);
         LOG.info("Sink Parquet schema: {}", schema);
 
-        // Pass the absolute path string directly to Hadoop Path — avoid file:// URIs
-        // entirely. On Windows, URI-based paths (file:/C:/...) cause InvalidPathException
-        // when Hadoop's local filesystem passes them to java.nio.file.Paths.get().
-        // Hadoop normalises path separators internally, so this works on all platforms.
-        Path path = new Path(tempFile.getAbsolutePath());
+        // Use LocalOutputFile instead of Hadoop Path — bypasses Hadoop's FileSystem
+        // entirely, avoiding winutils/NativeCodeLoader warnings and the Windows
+        // InvalidPathException caused by Hadoop reconstructing file:/C:/... URIs.
+        LocalOutputFile outputFile = new LocalOutputFile(tempFile.toPath());
         int processedRows = 0;
 
-        try (ParquetWriter<Group> writer = ExampleParquetWriter.builder(path)
-                .withConf(conf)
+        try (ParquetWriter<Group> writer = ExampleParquetWriter.builder(outputFile)
                 .withType(schema)
                 .withCompressionCodec(codec)
                 .withWriteMode(org.apache.parquet.hadoop.ParquetFileWriter.Mode.OVERWRITE)
