@@ -425,9 +425,9 @@ public class ADLSGen2Manager extends SqlManager {
 
     /** Returns true when the path has no URI scheme — i.e. it is a local filesystem path. */
     private static boolean isLocalPath(String path) {
-        // A URI scheme is letters followed by ':', e.g. "abfss:", "s3:", "file:".
-        // Plain local paths (/tmp/x, C:\x, ./x, meta/x) contain no such prefix.
-        return !path.matches("^[a-zA-Z][a-zA-Z0-9+\\-.]*:.*");
+        // A URI scheme is 2+ letters followed by ':', e.g. "abfss:", "s3:", "file:".
+        // A single-letter prefix like "C:" is a Windows drive letter, not a URI scheme.
+        return !path.matches("^[a-zA-Z][a-zA-Z0-9+\\-.]+:.*");
     }
 
     private static String statsFilePath(String dataFilePath) {
