@@ -360,9 +360,15 @@ public class ADLSGen2Manager extends SqlManager {
      * </ul>
      */
     private String resolveTaskPath(String path, int taskId) {
-        int dot = path.lastIndexOf('.');
-        String base = dot >= 0 ? path.substring(0, dot) : path;
-        String ext  = dot >= 0 ? path.substring(dot)    : "";  // e.g. ".parquet"
+        // Split directory and filename first, so a dot in a folder name (e.g. "data.lake/")
+        // is never mistaken for the file extension separator.
+        int slash = path.lastIndexOf('/');
+        String dir      = slash >= 0 ? path.substring(0, slash + 1) : "";
+        String filename = slash >= 0 ? path.substring(slash + 1)    : path;
+
+        int dot = filename.lastIndexOf('.');
+        String base = dot >= 0 ? filename.substring(0, dot) : filename;
+        String ext  = dot >= 0 ? filename.substring(dot)    : "";  // e.g. ".parquet"
 
         if (options.getJobs() > 1) {
             base = base + "_" + taskId;
@@ -373,7 +379,7 @@ public class ADLSGen2Manager extends SqlManager {
             base = base + "." + compressionSuffix;
         }
 
-        return base + ext;
+        return dir + base + ext;
     }
 
     /**
