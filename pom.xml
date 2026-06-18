@@ -709,6 +709,9 @@
                             <failBuildOnCVSS>7</failBuildOnCVSS>
                             <suppressionFile>${project.basedir}/.owasp-suppressions.xml</suppressionFile>
                             <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+                            <!-- NVD recommends 6s delay between calls; retry up to 5 times on transient errors -->
+                            <nvdApiDelay>6000</nvdApiDelay>
+                            <nvdMaxRetryCount>5</nvdMaxRetryCount>
                             <formats>
                                 <format>HTML</format>
                                 <format>JSON</format>
