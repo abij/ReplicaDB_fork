@@ -55,6 +55,8 @@ public class ManagerFactory {
                 return new S3Manager(options, dsType);
             } else if (ADLS2.isTheManagerTypeOf(options, dsType)) {
                 return new ADLSGen2Manager(options, dsType);
+            } else if (AZBLOB.isTheManagerTypeOf(options, dsType)) {
+                return new AzureBlobManager(options, dsType);
             } else if (MYSQL.isTheManagerTypeOf(options, dsType) || MARIADB.isTheManagerTypeOf(options, dsType)) {
                 return new MySQLManager(options, dsType);
             } else if (FILE.isTheManagerTypeOf(options, dsType)) {

@@ -1,5 +1,8 @@
 package org.replicadb.config;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
@@ -82,5 +85,25 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     /** Convenience: returns the filesystem client for the test filesystem. */
     public DataLakeFileSystemClient getTestFilesystemClient() {
         return buildServiceClient().getFileSystemClient(TEST_FILESYSTEM);
+    }
+
+    /**
+     * Returns the Blob service endpoint for Azurite.
+     * For Azurite, Blob and DFS endpoints are the same port.
+     */
+    public String getBlobEndpoint() {
+        return "http://127.0.0.1:" + getMappedPort(BLOB_PORT) + "/" + ACCOUNT_NAME;
+    }
+
+    /** Convenience: returns the blob container client for the test container. */
+    public BlobContainerClient getBlobContainerClient() {
+        return buildBlobServiceClient().getBlobContainerClient(TEST_FILESYSTEM);
+    }
+
+    private BlobServiceClient buildBlobServiceClient() {
+        return new BlobServiceClientBuilder()
+                .endpoint(getBlobEndpoint())
+                .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
+                .buildClient();
     }
 }

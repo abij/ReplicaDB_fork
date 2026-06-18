@@ -534,6 +534,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>12.29.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-core</artifactId>
             <version>1.9.8</version>

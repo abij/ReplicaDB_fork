@@ -118,8 +118,8 @@ public class ADLSGen2Manager extends SqlManager {
 
         // Parse:  abfss://filesystem@accountname.dfs.core.windows.net/path/to/file
         try {
-            URI uri = new URI(options.getSinkConnect());
-            this.fileSystemName = uri.getUserInfo();          // part before @
+            String connectStr = options.getSinkConnect();
+            URI uri = new URI(connectStr);
             String host = uri.getHost();                      // accountname.dfs.core.windows.net
             this.accountName = host.substring(0, host.indexOf('.'));
             this.serviceEndpoint = "https://" + host;
@@ -131,8 +131,25 @@ public class ADLSGen2Manager extends SqlManager {
                 this.serviceEndpoint = endpointOverride;
             }
 
-            String uriPath = uri.getPath();
-            String derivedPath = uriPath.startsWith("/") ? uriPath.substring(1) : uriPath;
+            String derivedPath;
+            if (connectStr.startsWith("abfss://")) {
+                // abfss://filesystem@accountname.dfs.core.windows.net/path
+                this.fileSystemName = uri.getUserInfo();
+                String uriPath = uri.getPath();
+                derivedPath = uriPath.startsWith("/") ? uriPath.substring(1) : uriPath;
+            } else {
+                // https://accountname.dfs.core.windows.net/filesystem/path
+                String uriPath = uri.getPath();
+                String stripped = uriPath.startsWith("/") ? uriPath.substring(1) : uriPath;
+                int slash = stripped.indexOf('/');
+                if (slash < 0) {
+                    this.fileSystemName = stripped;
+                    derivedPath = "";
+                } else {
+                    this.fileSystemName = stripped.substring(0, slash);
+                    derivedPath = stripped.substring(slash + 1);
+                }
+            }
 
             String keyFileNameProp = props.getProperty("keyFileName");
             this.filePath = (keyFileNameProp != null && !keyFileNameProp.isEmpty())

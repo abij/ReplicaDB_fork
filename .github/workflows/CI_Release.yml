@@ -75,6 +75,7 @@ jobs:
         automatic_release_tag: v${{ env.version }}
         prerelease: false
         files: |
+          ReplicaDB-*-jar-with-dependencies.jar
           ReplicaDB-*.zip
           ReplicaDB-*.tar.gz
 

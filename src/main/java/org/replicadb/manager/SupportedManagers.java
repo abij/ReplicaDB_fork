@@ -11,7 +11,23 @@ public enum SupportedManagers {
     JTDS_SQLSERVER(JdbcDrivers.JTDS_SQLSERVER.getSchemePrefix()), DB2(JdbcDrivers.DB2.getSchemePrefix()), DB2_AS400(JdbcDrivers.DB2_AS400.getSchemePrefix()),
     NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix()), DENODO(JdbcDrivers.DENODO.getSchemePrefix()),
     KAFKA(JdbcDrivers.KAFKA.getSchemePrefix()),
-    S3(JdbcDrivers.S3.getSchemePrefix()), ADLS2(JdbcDrivers.ADLS2.getSchemePrefix()), FILE(JdbcDrivers.FILE.getSchemePrefix()),
+    S3(JdbcDrivers.S3.getSchemePrefix()),
+    ADLS2(JdbcDrivers.ADLS2.getSchemePrefix()) {
+        @Override
+        public boolean isTheManagerTypeOf(ToolOptions options, DataSourceType dsType) {
+            String c = getConnectString(options, dsType);
+            return c != null && (c.startsWith("abfss://") ||
+                   (c.startsWith("https://") && hostEndsWith(c, ".dfs.core.windows.net")));
+        }
+    },
+    AZBLOB(JdbcDrivers.AZBLOB.getSchemePrefix()) {
+        @Override
+        public boolean isTheManagerTypeOf(ToolOptions options, DataSourceType dsType) {
+            String c = getConnectString(options, dsType);
+            return c != null && c.startsWith("https://") && hostEndsWith(c, ".blob.core.windows.net");
+        }
+    },
+    FILE(JdbcDrivers.FILE.getSchemePrefix()),
     SQLITE(JdbcDrivers.SQLITE.getSchemePrefix()),
     MONGODB(JdbcDrivers.MONGODB.getSchemePrefix()), MONGODBSRV(JdbcDrivers.MONGODBSRV.getSchemePrefix());
 
@@ -84,6 +100,21 @@ public enum SupportedManagers {
             }
         }
         return connectStr.substring(0, schemeStopIdx);
+    }
+
+    private static String getConnectString(ToolOptions options, DataSourceType dsType) {
+        if (dsType == DataSourceType.SOURCE) return options.getSourceConnect();
+        if (dsType == DataSourceType.SINK)   return options.getSinkConnect();
+        return null;
+    }
+
+    private static boolean hostEndsWith(String url, String suffix) {
+        int start = url.indexOf("://");
+        if (start < 0) return false;
+        start += 3;
+        int slash = url.indexOf('/', start);
+        String host = slash < 0 ? url.substring(start) : url.substring(start, slash);
+        return host.endsWith(suffix);
     }
 
 }
