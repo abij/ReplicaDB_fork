@@ -291,7 +291,7 @@ public class ADLSGen2Manager extends SqlManager {
         long durationMs = System.currentTimeMillis() - start;
         taskStats.put(taskId, new TaskStats(targetPath, processedRows, durationMs));
 
-        LOG.info("Uploaded {} rows → abfss://{}.dfs.core.windows.net/{}/{} ({}ms)",
+        LOG.info("Uploaded {} rows -> abfss://{}.dfs.core.windows.net/{}/{} ({}ms)",
                 processedRows, accountName, fileSystemName, targetPath, durationMs);
         return processedRows;
     }

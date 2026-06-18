@@ -26,6 +26,14 @@
         <Logger name="org.testcontainers.utility" level="warn"/>
         <Logger name="io.debezium" level="warn"/>
         
+        <!-- Azure SDK credential chain and HTTP noise -->
+        <Logger name="com.azure.identity" level="warn"/>
+        <Logger name="com.azure.core" level="warn"/>
+        <Logger name="com.azure.core.http.netty" level="warn"/>
+        <Logger name="com.microsoft.aad.msal4j" level="warn"/>
+        <Logger name="reactor.netty" level="warn"/>
+        <Logger name="io.netty" level="warn"/>
+
         <!-- Database drivers -->
         <Logger name="com.microsoft.sqlserver" level="warn"/>
         <Logger name="oracle" level="warn"/>
