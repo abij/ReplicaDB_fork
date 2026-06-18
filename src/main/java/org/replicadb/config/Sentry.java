@@ -27,7 +27,7 @@ public class Sentry {
         if (io.sentry.Sentry.isEnabled()) LOG.info("Sentry enabled");
 
         // Sentry Context
-        io.sentry.Sentry.configureScope(scope -> {
+        io.sentry.Sentry.withScope(scope -> {
             if (options.getSourceTable() != null) scope.setContexts("sourceTable", options.getSourceTable());
             if (options.getSourceColumns() != null) scope.setContexts("sourceColumns", options.getSourceColumns());
             if (options.getSourceWhere() != null) scope.setContexts("sourceWhere", options.getSourceWhere());

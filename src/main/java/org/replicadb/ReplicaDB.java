@@ -1,8 +1,6 @@
 package org.replicadb;
 
-import io.sentry.ITransaction;
 import io.sentry.Sentry;
-import io.sentry.SpanStatus;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -147,9 +145,7 @@ public class ReplicaDB {
 		// Reset static temp files map to avoid stale references between replication runs
 		FileManager.setTempFilesPath(new HashMap<>());
 
-		// Sentry
 		SentryInit(options);
-		final ITransaction transaction = Sentry.startTransaction("processReplica()", "task");
 
 		try {
 			final ReplicationManagers managers = createConnectionManagers(options);
@@ -169,17 +165,12 @@ public class ReplicaDB {
 			LOG.error("Replication was interrupted:", e);
 			Thread.currentThread().interrupt(); // Restore interrupted status
 			Sentry.captureException(e);
-			transaction.setThrowable(e);
-			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
 			exitCode = ERROR;
 		} catch (final Exception e) {
 			LOG.error("Got exception running ReplicaDB:", e);
 			Sentry.captureException(e);
-			transaction.setThrowable(e);
-			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
 			exitCode = ERROR;
 		} finally {
-			transaction.finish();
 			cleanupResources(sourceDs, sinkDs, preSinkTasksExecutor, replicaTasksService);
 		}
 
