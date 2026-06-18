@@ -6,6 +6,38 @@
 
 ![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
+---
+
+> ## Fork: [abij/ReplicaDB](https://github.com/abij/ReplicaDB) — fork of [osalvador/ReplicaDB](https://github.com/osalvador/ReplicaDB)
+>
+> **What this fork adds:**
+> - **Azure Data Lake Storage Gen2 (ADLS Gen2) sink** — write Parquet, CSV, or ORC directly to ADLS Gen2 (`abfss://...`)
+> - **Parquet output** — columnar Parquet files via Apache Parquet/Hadoop (replaces row-oriented CSV for analytics workloads)
+> - **Sink stats file** — `--sink-stats-file` writes a JSON summary (rows, duration, file path per task) to a local file or ADLS Gen2
+> - **DB2 partition column exclusion** — internal `RN` partition column is stripped from sink output
+> - **Windows path support** — local file paths with drive letters (e.g. `C:\...`) are handled correctly alongside URI schemes
+> - **Java 21 build, Java 11 runtime** — compiled with JDK 21 targeting Java 11 bytecode; all dependencies updated for CVE fixes
+>
+> **Download pre-built JAR (includes DB2 JCC driver):**
+> ```
+> https://github.com/abij/ReplicaDB/releases
+> ```
+>
+> **Quick start — replicate any JDBC source to ADLS Gen2 Parquet:**
+> ```bash
+> java -jar ReplicaDB-0.18.0-jar-with-dependencies.jar \
+>   --source-connect "jdbc:db2://host:50000/dbname" \
+>   --source-user <user> --source-password <pass> \
+>   --source-table MY_TABLE \
+>   --sink-connect "abfss://filesystem@account.dfs.core.windows.net/data/output.parquet" \
+>   --sink-file-format parquet \
+>   --jobs 4
+> ```
+>
+> Authentication uses the [Default Azure credential chain](https://learn.microsoft.com/en-us/azure/developer/java/sdk/identity-azure-hosted-auth) (Azure CLI, managed identity, service principal). See [ADLS Gen2 sink configuration](#adls-gen2-sink) below for all options.
+
+---
+
 ReplicaDB is a high-performance, open-source command-line tool for bulk data replication between heterogeneous databases. It enables efficient ETL/ELT workflows by transferring data in parallel between Oracle, PostgreSQL, MySQL, MongoDB, SQL Server, and other databases without requiring database agents or triggers.
 
 ReplicaDB supports a wide range of data sources including relational databases (Oracle, PostgreSQL, MySQL, MariaDB, SQL Server, SQLite, IBM DB2 LUW and DB2 for i), NoSQL databases (MongoDB), data virtualization platforms (Denodo), file formats (CSV), cloud storage (Amazon S3), and streaming platforms (Kafka). Any JDBC-compliant database is also supported with some limitations.
@@ -223,9 +255,103 @@ $ replicadb --mode=complete -j=1 \
 | CSV                     |    :heavy_check_mark:    | :heavy_check_mark: |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Kafka                   | :heavy_multiplication_x: |         N/A        |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Amazon S3               | :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
+| Azure ADLS Gen2 *(fork)*| :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
 See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html) for driver installation and platform-specific details.
+
+# ADLS Gen2 Sink
+
+> This feature is available in this fork only.
+
+Sink URI format:
+```
+abfss://<filesystem>@<account>.dfs.core.windows.net/<path/to/output.parquet>
+```
+
+File formats: `parquet` (default: Snappy compressed) and `csv`.
+
+## Authentication
+
+Resolved in priority order via `sink.connect.parameter.*`:
+
+| Priority | Method | Parameters |
+|----------|--------|------------|
+| 1 | Storage account key | `accountKey=<key>` |
+| 2 | Service principal | `tenantId=`, `clientId=`, `clientSecret=` |
+| 3 | Default Azure credential | *(none — uses Azure CLI / managed identity / env vars)* |
+
+## Connection Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `accountKey` | Storage account key | — |
+| `tenantId` / `clientId` / `clientSecret` | Service principal | — |
+| `endpoint` | Override service endpoint (Azurite / sovereign cloud) | derived from URI |
+| `parquet.compression` | `SNAPPY`, `GZIP`, `ZSTD`, `UNCOMPRESSED` | `SNAPPY` |
+| `statsFile` | Path within the filesystem to write the stats JSON | `<dir>/_replicadb_stats.json` |
+
+## Example options file
+
+```properties
+# replicadb.conf
+source.connect=jdbc:db2://dbhost:50000/mydb
+source.user=myuser
+source.password=secret
+source.table=MY_TABLE
+
+sink.connect=abfss://landing@mystorageaccount.dfs.core.windows.net/data/output.parquet
+sink.file.format=parquet
+
+# Auth — omit to use Azure CLI / managed identity
+sink.connect.parameter.tenantId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+sink.connect.parameter.clientId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+sink.connect.parameter.clientSecret=<secret>
+
+# Optional
+sink.connect.parameter.parquet.compression=SNAPPY
+sink.connect.parameter.statsFile=meta/run_stats.json
+```
+
+Output files with `--jobs 4`:
+```
+data/output_0.snappy.parquet
+data/output_1.snappy.parquet
+data/output_2.snappy.parquet
+data/output_3.snappy.parquet
+meta/run_stats.json
+```
+
+## Docker
+
+A ready-to-use image can be built from `Dockerfile.adls2` in this repository. It downloads the fat JAR (including DB2 JCC driver) from the GitHub release at build time — no local Java installation required.
+
+```bash
+# Build the image
+docker build -f Dockerfile.adls2 -t replicadb-adls2:preview .
+
+# Run with an options file
+docker run --rm \
+  -v /path/to/replicadb.conf:/conf/replicadb.conf \
+  replicadb-adls2:preview \
+  --options-file /conf/replicadb.conf
+```
+
+### Azure CLI authentication
+
+If you authenticate via `az login` on the host, mount the Azure credential cache read-only into the container. The `DefaultAzureCredential` chain will find it automatically — no credentials needed in the options file:
+
+```bash
+docker run --rm \
+  -v ~/.azure:/home/replicadb/.azure:ro \
+  -v /path/to/replicadb.conf:/conf/replicadb.conf \
+  replicadb-adls2:preview \
+  --options-file /conf/replicadb.conf
+```
+
+This works for local development and CI pipelines where `az login` (or `az login --service-principal`) has already been run on the host.
+
+For AKS or other Azure-hosted environments, workload identity or managed identity is picked up automatically without any mount.
 
 # Roadmap
 
@@ -263,6 +389,45 @@ We welcome contributions to ReplicaDB! Whether you're fixing bugs, adding featur
 - Keep pull requests focused on a single feature or fix
 
 For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) (when available).
+
+# Fork Changelog
+
+## v0.18.0 (abij fork)
+
+### Features
+- **ADLS Gen2 sink** — new `ADLSGen2Manager` supporting Parquet, CSV, and ORC output to Azure Data Lake Storage Gen2 (`abfss://filesystem@account.dfs.core.windows.net/path`)
+- **`--sink-stats-file`** — CLI flag to write per-task replication statistics (rows, duration, file path) as JSON to a local file or ADLS Gen2 path
+- **DB2 partition column exclusion** — `RN` partition column is automatically excluded from sink output
+- **Windows path support** — drive letters (e.g. `C:\...`) are treated as local paths, not URI schemes
+
+### Build & Dependencies
+- **Java 21 build, Java 11 runtime** — `maven.compiler.release=11`, compiled with JDK 21
+- **Dependency CVE fixes** — upgraded all dependencies to latest versions:
+  - `aws-java-sdk-bom` 1.11.106 → 1.12.797
+  - `mariadb-java-client` 2.7.3 → 2.7.12
+  - `commons-cli` 1.4 → 1.11.0
+  - `kafka-clients` 3.9.1 → 4.3.0
+  - `jackson-databind` 2.17.2 → 2.19.0 (+ all jackson modules aligned)
+  - `guava` 32.1.3 → 33.4.8
+  - `sqlite-jdbc` 3.41.2.2 → 3.49.1.0
+  - `mysql-connector-j` 8.2.0 → 9.3.0
+  - `sentry` 5.1.2 → 8.16.0
+  - `parquet-hadoop` 1.14.2 → 1.17.1
+  - `hadoop-common` 3.4.0 → 3.5.0
+  - `orc-core` 1.6.7 → 1.9.8 (+ explicit `hive-storage-api` 2.8.1)
+  - Log4j 2.25.x → 2.26.0 (all modules aligned)
+  - Azure SDK: `azure-storage-file-datalake` 12.22.0 → 12.23.0, `azure-identity` 1.15.0 → 1.16.2
+  - Transitive CVE fixes (round 1): `commons-compress` 1.28.0, `netty` 4.1.121.Final, `httpclient` 4.5.14, `commons-logging` 1.3.6, `avro` 1.12.1, `commons-net` 3.13.0
+  - Transitive CVE fixes (round 2, mend.io scan): `netty` 4.1.121 → 4.1.135.Final, `jackson-core/databind` 2.19.0 → 2.19.4, `reactor-netty-http` 1.0.48 → 1.3.6, `bcprov-jdk18on` 1.82 → 1.84
+  - Note: `jetty-http` 9.4.58 (from `hadoop-common`) — Jetty 9.4.x is EOL with no upstream fix; risk accepted as it's only used internally by Hadoop's REST API
+- **Maven plugins updated** — `maven-compiler-plugin` 3.7.0 → 3.15.0, `maven-surefire-plugin` 2.22.1 → 3.5.6
+
+### Fixes
+- `fix(adls2)`: treat Windows drive letters (`C:`) as local paths, not URI schemes
+- `fix(db2)`: exclude internal `RN` partition column from sink output
+- `fix(parquet)`: replace Hadoop `Path` with `LocalOutputFile` to fix Windows path errors
+
+---
 
 # License
 

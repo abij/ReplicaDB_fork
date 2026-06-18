@@ -7,6 +7,7 @@ import org.replicadb.manager.DataSourceType;
 
 import static org.replicadb.manager.file.FileFormats.CSV;
 import static org.replicadb.manager.file.FileFormats.ORC;
+import static org.replicadb.manager.file.FileFormats.PARQUET;
 
 public class FileManagerFactory {
     private static final Logger LOG = LogManager.getLogger(FileManagerFactory.class);
@@ -31,6 +32,9 @@ public class FileManagerFactory {
         if (ORC.getType().equals(fileFormat)) {
             LOG.info("return OrcFileManager");
             return new OrcFileManager(options, dsType);
+        } else if (PARQUET.getType().equals(fileFormat)) {
+            LOG.info("return ParquetFileManager");
+            return new ParquetFileManager(options, dsType);
         } else if (CSV.getType().equals(fileFormat)) {
             LOG.info("return CsvFileManager");
             return new CsvFileManager(options, dsType);

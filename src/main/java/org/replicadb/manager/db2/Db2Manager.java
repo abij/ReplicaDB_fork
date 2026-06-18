@@ -92,14 +92,36 @@ public class Db2Manager extends SqlManager {
             return super.execute(baseQuery);
         }
 
-        String innerSelectColumns = "*".equals(allColumns) ? "SRC.*" : allColumns;
-        String outerSelectColumns = "*".equals(allColumns) ? "*" : allColumns;
-        String sqlCmd = "SELECT " + outerSelectColumns + " FROM (SELECT " + innerSelectColumns
+        // When allColumns is "*", resolve the actual column names so the outer SELECT
+        // never exposes the internal RN partition column to the sink.
+        if ("*".equals(allColumns)) {
+            allColumns = fetchColumnList(baseQuery);
+        }
+
+        String sqlCmd = "SELECT " + allColumns + " FROM (SELECT " + allColumns
             + ", MOD(ROW_NUMBER() OVER (ORDER BY 1), " + this.options.getJobs()
             + ") AS RN FROM (" + baseQuery + ") SRC) PART WHERE RN = " + nThread;
 
         LOG.debug("{}: Reading table with command: {}", Thread.currentThread().getName(), sqlCmd);
         return super.execute(sqlCmd);
+    }
+
+    /**
+     * Resolves the explicit column list for a query by executing a zero-row fetch.
+     * Used to avoid exposing the internal RN partition column when the user selected "*".
+     */
+    private String fetchColumnList(String baseQuery) throws SQLException {
+        String metaQuery = "SELECT * FROM (" + baseQuery + ") META FETCH FIRST 0 ROWS ONLY";
+        try (Statement st = this.getConnection().createStatement();
+             ResultSet rs = st.executeQuery(metaQuery)) {
+            ResultSetMetaData rsmd = rs.getMetaData();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                if (i > 1) sb.append(", ");
+                sb.append(escapeColName(rsmd.getColumnName(i)));
+            }
+            return sb.toString();
+        }
     }
 
     /**

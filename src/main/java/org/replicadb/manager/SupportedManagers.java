@@ -11,7 +11,7 @@ public enum SupportedManagers {
     JTDS_SQLSERVER(JdbcDrivers.JTDS_SQLSERVER.getSchemePrefix()), DB2(JdbcDrivers.DB2.getSchemePrefix()), DB2_AS400(JdbcDrivers.DB2_AS400.getSchemePrefix()),
     NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix()), DENODO(JdbcDrivers.DENODO.getSchemePrefix()),
     KAFKA(JdbcDrivers.KAFKA.getSchemePrefix()),
-    S3(JdbcDrivers.S3.getSchemePrefix()), FILE(JdbcDrivers.FILE.getSchemePrefix()),
+    S3(JdbcDrivers.S3.getSchemePrefix()), ADLS2(JdbcDrivers.ADLS2.getSchemePrefix()), FILE(JdbcDrivers.FILE.getSchemePrefix()),
     SQLITE(JdbcDrivers.SQLITE.getSchemePrefix()),
     MONGODB(JdbcDrivers.MONGODB.getSchemePrefix()), MONGODBSRV(JdbcDrivers.MONGODBSRV.getSchemePrefix());
 
