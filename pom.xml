@@ -806,29 +806,38 @@
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.6.0</version>
                         <executions>
                             <execution>
                                 <phase>package</phase>
                                 <goals>
-                                    <goal>single</goal>
+                                    <goal>shade</goal>
                                 </goals>
+                                <configuration>
+                                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                                    <transformers>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>org.replicadb.ReplicaDB</mainClass>
+                                        </transformer>
+                                        <!-- Merges META-INF/services/ files instead of overwriting them -->
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    </transformers>
+                                    <filters>
+                                        <!-- Exclude dnsjava's Java 18+ InetAddressResolverProvider SPI —
+                                             not usable on Java 11 and causes ServiceConfigurationError at startup -->
+                                        <filter>
+                                            <artifact>dnsjava:dnsjava</artifact>
+                                            <excludes>
+                                                <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
+                                            </excludes>
+                                        </filter>
+                                    </filters>
+                                </configuration>
                             </execution>
                         </executions>
-                        <configuration>
-                            <archive>
-                                <manifest>
-                                    <addClasspath>true</addClasspath>
-                                    <mainClass>org.replicadb.ReplicaDB</mainClass>
-                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                                </manifest>
-                            </archive>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>
