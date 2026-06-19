@@ -84,9 +84,21 @@ jobs:
         automatic_release_tag: ${{ env.release_tag }}
         prerelease: ${{ !startsWith(github.ref_name, 'v') }}
         files: |
-          ReplicaDB-*-jar-with-dependencies.jar
           ReplicaDB-*.zip
           ReplicaDB-*.tar.gz
+
+    - name: Upload fat jar
+      run: |
+        FAT_JAR=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -name "*-jar-with-dependencies.jar" | head -1)
+        if [ -z "$FAT_JAR" ]; then
+          echo "ERROR: jar-with-dependencies not found in workspace"
+          ls -la "$GITHUB_WORKSPACE"/*.jar 2>/dev/null || true
+          exit 1
+        fi
+        echo "Uploading: $FAT_JAR"
+        gh release upload ${{ env.release_tag }} "$FAT_JAR" --clobber
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     -   name: Set up QEMU
         if: startsWith(github.ref_name, 'v') || github.event_name == 'workflow_dispatch'
