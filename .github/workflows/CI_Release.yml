@@ -58,6 +58,14 @@ jobs:
         find ./target -name "*-jar-with-dependencies.jar" -type f
         cp ./target/*-jar-with-dependencies.jar .
 
+    - name: Smoke test fat jar (preview)
+      if: startsWith(github.ref_name, 'adls2-')
+      run: |
+        FAT_JAR=$(find . -maxdepth 1 -name "*-jar-with-dependencies.jar" -type f | head -1)
+        echo "Testing: $FAT_JAR"
+        java -jar "$FAT_JAR" --help 2>&1 | head -5
+        echo "Exit code: $?"
+
     - name: Upload fat jar to preview release
       if: startsWith(github.ref_name, 'adls2-')
       run: |
@@ -85,6 +93,14 @@ jobs:
         tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
         zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
         ls -lah
+
+    - name: Smoke test fat jar
+      if: startsWith(github.ref_name, 'v') || github.event_name == 'workflow_dispatch'
+      run: |
+        FAT_JAR=$(find . -maxdepth 1 -name "*-jar-with-dependencies.jar" -type f | head -1)
+        echo "Testing: $FAT_JAR"
+        java -jar "$FAT_JAR" --help 2>&1 | head -5
+        echo "Exit code: $?"
 
     - name: Maven Install no-oracle
       if: startsWith(github.ref_name, 'v') || github.event_name == 'workflow_dispatch'
