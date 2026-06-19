@@ -168,7 +168,7 @@ public class ADLSGen2Manager extends SqlManager {
                     "Invalid ADLS Gen2 connection string. Expected: abfss://filesystem@account.dfs.core.windows.net/path", e);
         }
 
-        LOG.debug("ADLS Gen2 — endpoint: {}, filesystem: {}, path: {}, auth: {}",
+        LOG.debug("ADLS Gen2 - endpoint: {}, filesystem: {}, path: {}, auth: {}",
                 serviceEndpoint, fileSystemName, filePath, describeAuth());
     }
 
@@ -219,7 +219,7 @@ public class ADLSGen2Manager extends SqlManager {
     @Override
     public void postSinkTasks() throws Exception {
         if (taskStats.isEmpty()) {
-            LOG.debug("No task stats recorded — skipping stats file");
+            LOG.debug("No task stats recorded - skipping stats file");
             return;
         }
 
