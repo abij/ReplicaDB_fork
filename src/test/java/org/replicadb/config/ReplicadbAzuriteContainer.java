@@ -42,7 +42,8 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
-        withCommand("azurite", "--skipApiVersionCheck", "--loose", "--blobHost", "0.0.0.0");
+        // ENTRYPOINT is "node azurite.js" — pass flags as CMD args only, no "azurite" prefix
+        withCommand("--skipApiVersionCheck", "--loose", "--blobHost", "0.0.0.0");
     }
 
     public static ReplicadbAzuriteContainer getInstance() {

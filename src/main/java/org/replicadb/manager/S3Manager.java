@@ -187,8 +187,8 @@ public class S3Manager extends SqlManager {
         serviceEndpoint = serviceEndpoint + s3Uri.getHost() + servicePort;
         LOG.debug("Using serviceEndpoint: " + serviceEndpoint);
 
-        // Get Bucket name
-        String bucketName = s3Uri.getPath().replaceAll("/$", "");
+        // Get Bucket name — URI path always starts with '/', strip it before splitting
+        String bucketName = s3Uri.getPath().replaceFirst("^/+", "").replaceAll("/$", "");
         if (keyFileName == null) {
             this.keyFileName = bucketName.substring(bucketName.lastIndexOf("/") + 1);
             bucketName = bucketName.replace(keyFileName,"").replaceAll("/$", "");
