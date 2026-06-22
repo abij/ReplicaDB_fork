@@ -78,6 +78,19 @@
                 <version>4.4.16</version>
             </dependency>
 
+            <!-- Pin protobuf to 3.24.x — ORC 1.9.8 generated code overrides makeExtensionsImmutable()
+                 which was made final in protobuf-java 3.25.0, causing NoSuchMethodError at runtime -->
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.24.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java-util</artifactId>
+                <version>3.24.4</version>
+            </dependency>
+
             <!-- Force commons-net to latest -->
             <dependency>
                 <groupId>commons-net</groupId>

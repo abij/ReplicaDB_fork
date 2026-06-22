@@ -200,7 +200,6 @@ public class S3Manager extends SqlManager {
         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
         AmazonS3 s3Client = AmazonS3ClientBuilder
                 .standard()
-                .withRegion("")
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(serviceEndpoint, null))
                 .withPathStyleAccessEnabled(true)
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))

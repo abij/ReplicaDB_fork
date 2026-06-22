@@ -24,7 +24,7 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     private static final Logger LOG = LogManager.getLogger(ReplicadbAzuriteContainer.class);
 
     private static final DockerImageName IMAGE =
-            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.33.0");
+            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.35.0");
 
     // Well-known Azurite development credentials — safe to commit, not real secrets
     public static final String ACCOUNT_NAME = "devstoreaccount1";
@@ -42,6 +42,7 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
+        withCommand("azurite", "--skipApiVersionCheck", "--loose", "--blobHost", "0.0.0.0");
     }
 
     public static ReplicadbAzuriteContainer getInstance() {
