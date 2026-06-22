@@ -42,8 +42,15 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
-        // ENTRYPOINT is "node azurite.js" — pass flags as CMD args only, no "azurite" prefix
-        withCommand("--skipApiVersionCheck", "--loose", "--blobHost", "0.0.0.0");
+        // Append --skipApiVersionCheck to the image's existing CMD rather than replacing it,
+        // so Azurite 3.33.0 accepts the Azure SDK's 2025-05-05 API version header.
+        withCreateContainerCmdModifier(cmd -> {
+            java.util.List<String> args = (cmd.getCmd() != null)
+                    ? new java.util.ArrayList<>(java.util.Arrays.asList(cmd.getCmd()))
+                    : new java.util.ArrayList<>();
+            args.add("--skipApiVersionCheck");
+            cmd.withCmd(args);
+        });
     }
 
     public static ReplicadbAzuriteContainer getInstance() {
