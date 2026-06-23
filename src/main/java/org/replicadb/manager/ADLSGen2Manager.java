@@ -9,6 +9,7 @@ import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
+import com.azure.storage.file.datalake.DataLakeServiceVersion;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -90,6 +91,8 @@ public class ADLSGen2Manager extends SqlManager {
     private String clientSecret;
     // option 3: DefaultAzureCredential (no fields needed)
 
+    private String serviceVersion;   // optional: pin DFS API version (e.g. "V2024_08_04" for Azurite)
+
     private final FileManager fileManager;
 
     // -------------------------------------------------------------------------
@@ -111,10 +114,11 @@ public class ADLSGen2Manager extends SqlManager {
         if (props == null) props = new Properties();
 
         // Auth params — all optional; credential is resolved in priority order at runtime
-        this.accountKey   = props.getProperty("accountKey");
-        this.tenantId     = props.getProperty("tenantId");
-        this.clientId     = props.getProperty("clientId");
-        this.clientSecret = props.getProperty("clientSecret");
+        this.accountKey     = props.getProperty("accountKey");
+        this.tenantId       = props.getProperty("tenantId");
+        this.clientId       = props.getProperty("clientId");
+        this.clientSecret   = props.getProperty("clientSecret");
+        this.serviceVersion = props.getProperty("serviceVersion");
 
         // Parse:  abfss://filesystem@accountname.dfs.core.windows.net/path/to/file
         try {
@@ -332,6 +336,14 @@ public class ADLSGen2Manager extends SqlManager {
     private DataLakeServiceClient buildServiceClient() {
         DataLakeServiceClientBuilder builder = new DataLakeServiceClientBuilder()
                 .endpoint(serviceEndpoint);
+
+        if (serviceVersion != null && !serviceVersion.isEmpty()) {
+            try {
+                builder.serviceVersion(DataLakeServiceVersion.valueOf(serviceVersion));
+            } catch (IllegalArgumentException e) {
+                LOG.warn("Unknown serviceVersion '{}', using default", serviceVersion);
+            }
+        }
 
         if (accountKey != null && !accountKey.isEmpty()) {
             builder.credential(new StorageSharedKeyCredential(accountName, accountKey));

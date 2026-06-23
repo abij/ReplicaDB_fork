@@ -24,7 +24,10 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     private static final Logger LOG = LogManager.getLogger(ReplicadbAzuriteContainer.class);
 
     private static final DockerImageName IMAGE =
-            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:latest");
+            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.33.0");
+
+    /** Latest API version supported by Azurite 3.33.0. Set as serviceVersion in test params. */
+    public static final String COMPATIBLE_SERVICE_VERSION = "V2024_08_04";
 
     // Well-known Azurite development credentials — safe to commit, not real secrets
     public static final String ACCOUNT_NAME = "devstoreaccount1";

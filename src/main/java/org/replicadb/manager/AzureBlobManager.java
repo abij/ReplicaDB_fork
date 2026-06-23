@@ -7,6 +7,7 @@ import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.BlobServiceVersion;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,6 +71,7 @@ public class AzureBlobManager extends SqlManager {
     private String tenantId;
     private String clientId;
     private String clientSecret;
+    private String serviceVersion;   // optional: pin Blob API version (e.g. "V2024_08_04" for Azurite)
 
     private final FileManager fileManager;
 
@@ -86,10 +88,11 @@ public class AzureBlobManager extends SqlManager {
                 : options.getSinkConnectionParams();
         if (props == null) props = new Properties();
 
-        this.accountKey   = props.getProperty("accountKey");
-        this.tenantId     = props.getProperty("tenantId");
-        this.clientId     = props.getProperty("clientId");
-        this.clientSecret = props.getProperty("clientSecret");
+        this.accountKey     = props.getProperty("accountKey");
+        this.tenantId       = props.getProperty("tenantId");
+        this.clientId       = props.getProperty("clientId");
+        this.clientSecret   = props.getProperty("clientSecret");
+        this.serviceVersion = props.getProperty("serviceVersion");
 
         try {
             // https://accountname.blob.core.windows.net/container/path/to/blob
@@ -247,6 +250,14 @@ public class AzureBlobManager extends SqlManager {
     private BlobServiceClient buildServiceClient() {
         BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
                 .endpoint(serviceEndpoint);
+
+        if (serviceVersion != null && !serviceVersion.isEmpty()) {
+            try {
+                builder.serviceVersion(BlobServiceVersion.valueOf(serviceVersion));
+            } catch (IllegalArgumentException e) {
+                LOG.warn("Unknown serviceVersion '{}', using default", serviceVersion);
+            }
+        }
 
         if (accountKey != null && !accountKey.isEmpty()) {
             builder.credential(new StorageSharedKeyCredential(accountName, accountKey));
