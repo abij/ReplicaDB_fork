@@ -28,8 +28,8 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     private static final DockerImageName IMAGE =
             DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.33.0");
 
-    /** Latest API version supported by Azurite 3.33.0. Set as serviceVersion in test params. */
-    public static final String COMPATIBLE_SERVICE_VERSION = "V2024_08_04";
+    /** API version supported by Azurite 3.33.0. Set as serviceVersion in test params. */
+    public static final String COMPATIBLE_SERVICE_VERSION = "V2021_12_02";
 
     // Well-known Azurite development credentials — safe to commit, not real secrets
     public static final String ACCOUNT_NAME = "devstoreaccount1";
@@ -51,8 +51,9 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
 
     public static ReplicadbAzuriteContainer getInstance() {
         if (container == null) {
-            container = new ReplicadbAzuriteContainer();
-            container.start();
+            ReplicadbAzuriteContainer c = new ReplicadbAzuriteContainer();
+            c.start();         // if start() throws, c is never assigned — next call retries
+            container = c;
         }
         return container;
     }
@@ -61,8 +62,10 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     public void start() {
         super.start();
         LOG.info("Azurite started on port {}", getMappedPort(BLOB_PORT));
-        // createIfNotExists() is idempotent — safe when container is reused across runs
-        buildServiceClient().getFileSystemClient(TEST_FILESYSTEM).createIfNotExists();
+        // Create the filesystem via Blob API — the DFS filesystem is backed by a Blob container.
+        // Using Blob API here avoids DataLakeServiceVersion vs internal-Blob-version mismatch
+        // that would cause Azurite 3.33.0 to reject the DFS createIfNotExists call.
+        buildBlobServiceClient().getBlobContainerClient(TEST_FILESYSTEM).createIfNotExists();
         LOG.info("Azurite filesystem '{}' ready", TEST_FILESYSTEM);
     }
 
