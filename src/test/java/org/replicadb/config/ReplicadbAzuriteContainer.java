@@ -1,5 +1,7 @@
 package org.replicadb.config;
 
+import com.azure.core.http.HttpHeaders;
+import com.azure.core.http.policy.AddHeadersPolicy;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -62,10 +64,11 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     public void start() {
         super.start();
         LOG.info("Azurite started on port {}", getMappedPort(BLOB_PORT));
-        // Create the filesystem via Blob API — the DFS filesystem is backed by a Blob container.
-        // Using Blob API here avoids DataLakeServiceVersion vs internal-Blob-version mismatch
-        // that would cause Azurite 3.33.0 to reject the DFS createIfNotExists call.
-        buildBlobServiceClient().getBlobContainerClient(TEST_FILESYSTEM).createIfNotExists();
+        // Create via DFS API — this registers the container as an HNS filesystem in Azurite,
+        // which is required for DFS path operations to work later.
+        // AddHeadersPolicy in buildServiceClient() forces x-ms-version on ALL requests
+        // (including the internal Blob client call inside createIfNotExists) so Azurite 3.33.0 accepts it.
+        buildServiceClient().getFileSystemClient(TEST_FILESYSTEM).createIfNotExists();
         LOG.info("Azurite filesystem '{}' ready", TEST_FILESYSTEM);
     }
 
@@ -84,10 +87,16 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
 
     /** Builds a service client pointed at this Azurite instance. */
     public DataLakeServiceClient buildServiceClient() {
+        DataLakeServiceVersion version = DataLakeServiceVersion.valueOf(COMPATIBLE_SERVICE_VERSION);
+        // AddHeadersPolicy forces x-ms-version on ALL pipeline requests, including internal Blob
+        // client calls inside DataLakeFileSystemClient.createIfNotExists(). Without this, the
+        // internal Blob client ignores serviceVersion() and sends the default (2025-05-05),
+        // which Azurite 3.33.0 rejects.
         return new DataLakeServiceClientBuilder()
                 .endpoint(getDfsEndpoint())
                 .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
-                .serviceVersion(DataLakeServiceVersion.valueOf(COMPATIBLE_SERVICE_VERSION))
+                .serviceVersion(version)
+                .addPolicy(new AddHeadersPolicy(new HttpHeaders().set("x-ms-version", version.getVersion())))
                 .buildClient();
     }
 
