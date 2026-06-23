@@ -43,6 +43,9 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
+        // --loose ignores unsupported/unknown request headers, allowing the Azure SDK's
+        // API 2025-05-05 headers to pass validation in Azurite's DFS path create handler
+        withCommand("--loose", "--blobHost", "0.0.0.0");
     }
 
     public static ReplicadbAzuriteContainer getInstance() {
