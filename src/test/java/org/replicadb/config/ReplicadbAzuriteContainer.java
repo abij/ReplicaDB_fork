@@ -23,9 +23,9 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
 
     private static final Logger LOG = LogManager.getLogger(ReplicadbAzuriteContainer.class);
 
-    // 3.35.0 natively supports Azure Storage API version 2025-05-05 used by the SDK
+    // 3.34.0 supports Azure Storage API version 2025-05-05 used by the SDK
     private static final DockerImageName IMAGE =
-            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.35.0");
+            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.34.0");
 
     // Well-known Azurite development credentials — safe to commit, not real secrets
     public static final String ACCOUNT_NAME = "devstoreaccount1";
@@ -43,9 +43,6 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
-        // --loose ignores unsupported/unknown request headers, allowing the Azure SDK's
-        // API 2025-05-05 headers to pass validation in Azurite's DFS path create handler
-        withCommand("--loose", "--blobHost", "0.0.0.0");
     }
 
     public static ReplicadbAzuriteContainer getInstance() {
