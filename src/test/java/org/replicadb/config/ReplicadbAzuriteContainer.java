@@ -24,7 +24,7 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
     private static final Logger LOG = LogManager.getLogger(ReplicadbAzuriteContainer.class);
 
     private static final DockerImageName IMAGE =
-            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.33.0");
+            DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:latest");
 
     // Well-known Azurite development credentials — safe to commit, not real secrets
     public static final String ACCOUNT_NAME = "devstoreaccount1";
@@ -42,15 +42,6 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         super(IMAGE);
         withExposedPorts(BLOB_PORT);
         withReuse(true);
-        // Append --skipApiVersionCheck to the image's existing CMD rather than replacing it,
-        // so Azurite 3.33.0 accepts the Azure SDK's 2025-05-05 API version header.
-        withCreateContainerCmdModifier(cmd -> {
-            java.util.List<String> args = (cmd.getCmd() != null)
-                    ? new java.util.ArrayList<>(java.util.Arrays.asList(cmd.getCmd()))
-                    : new java.util.ArrayList<>();
-            args.add("--skipApiVersionCheck");
-            cmd.withCmd(args);
-        });
     }
 
     public static ReplicadbAzuriteContainer getInstance() {
