@@ -216,7 +216,6 @@ class DB22AzureBlobFileTest {
         Properties p = new Properties();
         p.setProperty("accountKey", ReplicadbAzuriteContainer.ACCOUNT_KEY);
         p.setProperty("endpoint", azurite.getBlobEndpoint());
-        p.setProperty("serviceVersion", ReplicadbAzuriteContainer.COMPATIBLE_SERVICE_VERSION);
         return p;
     }
 

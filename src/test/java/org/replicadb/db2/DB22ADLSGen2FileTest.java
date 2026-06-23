@@ -253,7 +253,6 @@ class DB22ADLSGen2FileTest {
         Properties p = new Properties();
         p.setProperty("accountKey", ReplicadbAzuriteContainer.ACCOUNT_KEY);
         p.setProperty("endpoint", azurite.getDfsEndpoint());
-        p.setProperty("serviceVersion", ReplicadbAzuriteContainer.COMPATIBLE_SERVICE_VERSION);
         return p;
     }
 
