@@ -3,10 +3,12 @@ package org.replicadb.config;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.BlobServiceVersion;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
+import com.azure.storage.file.datalake.DataLakeServiceVersion;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.testcontainers.containers.GenericContainer;
@@ -82,6 +84,7 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         return new DataLakeServiceClientBuilder()
                 .endpoint(getDfsEndpoint())
                 .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
+                .serviceVersion(DataLakeServiceVersion.valueOf(COMPATIBLE_SERVICE_VERSION))
                 .buildClient();
     }
 
@@ -107,6 +110,7 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
         return new BlobServiceClientBuilder()
                 .endpoint(getBlobEndpoint())
                 .credential(new StorageSharedKeyCredential(ACCOUNT_NAME, ACCOUNT_KEY))
+                .serviceVersion(BlobServiceVersion.valueOf(COMPATIBLE_SERVICE_VERSION))
                 .buildClient();
     }
 }
