@@ -1,6 +1,8 @@
 package org.replicadb.manager;
 
 import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.HttpHeaders;
+import com.azure.core.http.policy.AddHeadersPolicy;
 import com.azure.core.util.BinaryData;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -253,7 +255,11 @@ public class AzureBlobManager extends SqlManager {
 
         if (serviceVersion != null && !serviceVersion.isEmpty()) {
             try {
-                builder.serviceVersion(BlobServiceVersion.valueOf(serviceVersion));
+                BlobServiceVersion v = BlobServiceVersion.valueOf(serviceVersion);
+                builder.serviceVersion(v);
+                // AddHeadersPolicy forces x-ms-version on ALL pipeline requests
+                builder.addPolicy(new AddHeadersPolicy(
+                        new HttpHeaders().set("x-ms-version", v.getVersion())));
             } catch (IllegalArgumentException e) {
                 LOG.warn("Unknown serviceVersion '{}', using default", serviceVersion);
             }
