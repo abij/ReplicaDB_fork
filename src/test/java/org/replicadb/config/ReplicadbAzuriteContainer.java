@@ -23,7 +23,8 @@ public class ReplicadbAzuriteContainer extends GenericContainer<ReplicadbAzurite
 
     private static final Logger LOG = LogManager.getLogger(ReplicadbAzuriteContainer.class);
 
-    // 3.34.0 supports Azure Storage API version 2025-05-05 used by the SDK
+    // 3.34.0 supports Azure Storage API version 2025-05-05 used by the SDK.
+    // Use default CMD (no withCommand override) — Azurite 3.34.0 includes HNS support.
     private static final DockerImageName IMAGE =
             DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:3.34.0");
 
